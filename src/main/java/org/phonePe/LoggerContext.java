@@ -35,9 +35,7 @@ public class LoggerContext {
         } else {
             this.executorService = Executors.newSingleThreadExecutor();
         }
-
         this.isAsync = "ASYNC".equalsIgnoreCase(writeMode);
-
         String trackingId = config.get("tracking_id");
         String hostName = config.get("host_name");
         this.messageFactory = new LogMessageFactory(trackingId, hostName);
@@ -46,7 +44,6 @@ public class LoggerContext {
             if (level.isLoggable(thresholdLevel)) {
                 String levelSpecificSinkType = config.getOrDefault("sink_type_" + level.name(), sinkType);
                 LogSink sink = SinkFactory.createSink(levelSpecificSinkType, config);
-
                 if (!sinks.containsKey(level)) {
                     sinks.put(level, new ArrayList<>());
                 }
@@ -54,20 +51,20 @@ public class LoggerContext {
             }
         }
     }
+
     public void log(String content, LogLevel level, String namespace) {
         if (!level.isLoggable(thresholdLevel) || !sinks.containsKey(level)) {
             return;
         }
         LogMessage message = messageFactory.createMessage(content, level, namespace);
-
         List<LogSink> sinksForLevel = sinks.get(level);
-
         if (isAsync) {
             executorService.submit(() -> writeToSinks(message, sinksForLevel));
         } else {
             writeToSinks(message, sinksForLevel);
         }
     }
+
     private void writeToSinks(LogMessage message, List<LogSink> sinksForLevel) {
         for (LogSink sink : sinksForLevel) {
             sink.append(message);
@@ -76,7 +73,6 @@ public class LoggerContext {
 
     public void close() {
         executorService.shutdown(); // can await the shutdown
-
         for (List<LogSink> sinksForLevel : sinks.values()) {
             for (LogSink sink : sinksForLevel) {
                 sink.close();

@@ -1,2 +1,1 @@
-WARN [2025-04-18 01:15:40,908] [server-01] [app-123] [data] Data validation warning: missing optional field
-ERROR [2025-04-18 01:15:40,939] [server-01] [app-123] [auth] Authentication failed: invalid credentials
+ERROR [2025-04-18 12:25:32,371] [server-01] [app-123] [auth] Authentication failed: invalid credentials

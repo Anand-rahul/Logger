@@ -7,33 +7,49 @@ import org.phonePe.model.LogLevel;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class Logger {
+    private static Logger instance;
     private static LoggerContext context;
-    private final String namespace;
+    private String namespace;
+    private static final Map<String, Logger> namespaceLoggers = new HashMap<>();
 
+    private Logger() {
+    }
+
+    // Private constructor for namespace-specific loggers
     private Logger(String namespace) {
         this.namespace = namespace;
     }
 
+    /**
+     * Gets the singleton instance of Logger
+     */
+    public static Logger getInstance() {
+        if (instance == null) {
+            instance = new Logger();
+        }
+        return instance;
+    }
 
-    public static void init(ConfigProvider configProvider) throws IOException {
+    public void init(ConfigProvider configProvider) throws IOException {
         if (context != null) {
             context.close();
         }
         context = new LoggerContext(configProvider);
     }
 
-    public static void init(String configFilePath) throws IOException {
+    public void init(String configFilePath) throws IOException {
         init(new FileConfigProvider(configFilePath));
     }
 
-    public static void init(Map<String, String> config) throws IOException {
+    public void init(Map<String, String> config) throws IOException {
         init(new MapConfigProvider(config));
     }
 
-    public static Logger getLogger(String namespace) {
+    public Logger getLogger(String namespace) {
         if (context == null) {
             try {
                 init(new MapConfigProvider(Collections.singletonMap("sink_type", "CONSOLE")));
@@ -41,7 +57,12 @@ public class Logger {
                 throw new RuntimeException("Failed to initialize logger with default configuration", e);
             }
         }
-        return new Logger(namespace);
+
+        // Return existing namespace logger or create a new one
+        if (!namespaceLoggers.containsKey(namespace)) {
+            namespaceLoggers.put(namespace, new Logger(namespace));
+        }
+        return namespaceLoggers.get(namespace);
     }
 
     // Log methods for different levels
@@ -70,12 +91,12 @@ public class Logger {
             context.log(message, level, namespace);
         }
     }
-
-    public static void close() {
+    public void close() {
         if (context != null) {
             context.close();
             System.out.println("Closed Logger");
             context = null;
+            namespaceLoggers.clear();
         }
     }
 }

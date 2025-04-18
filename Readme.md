@@ -6,11 +6,10 @@ A simple, pluggable logging library for Java applications supporting multiple lo
 
 - Log levels: DEBUG, INFO, WARN, ERROR, FATAL
 - Configurable timestamp format
-- Pluggable sinks: FILE, CONSOLE, DB
+- Pluggable sinks: FILE, CONSOLE, DB,HTTP
 - File sink with size-based rotation and compressed backups
 - Synchronous and asynchronous write modes
 - Single- or multi-threaded models
-- Tracking ID and host name enrichment
 - Easy configuration via properties file or Map
 
 ## Getting Started
@@ -23,7 +22,7 @@ Include the source files under your project (e.g., in `src/main/java`). No exter
 
 You can configure the logger via a properties file or directly with a `Map<String, String>`.
 
-**Example `logger.config`:**
+**Example `loggerConfig.txt`:**
 ```properties
 # timestamp format
 ts_format:yyyy-MM-dd HH:mm:ss,SSS
@@ -63,12 +62,12 @@ Logger.init(config);
 
 ```java
 // Initialize with file or map
-Logger.init("path/to/logger.config");
-// or Logger.init(configMap);
+//Logger.getInstance().init(config);
+Logger.getInstance().init("config-file");
 
 // Obtain namespace-specific loggers
-Logger authLog = Logger.getLogger("auth");
-Logger dataLog = Logger.getLogger("data");
+Logger authLogger = Logger.getInstance().getLogger("auth");//auth is namespace 
+Logger dataLogger = Logger.getInstance().getLogger("data");//data is namespace
 
 // Log messages
 authLog.info("User authenticated successfully");
@@ -85,21 +84,40 @@ To add your own sink, implement `LogSink`:
 ```java
 public class MySink implements LogSink {
     @Override
-    public void append(LogMessage msg) { /* write somewhere */ }
+    public void append(LogMessage msg) {}
     @Override
-    public void close() { /* cleanup */ }
+    public void close() {  }
 }
 ```
-Register in `SinkFactory`, then set `sink_type:MY_SINK` in config.
+
+```java 
+public class MySinkProvider implements LogSinkProvider {
+    @Override
+    public String getSinkType() {
+        return "Custom";
+    }
+
+    @Override
+    public LogSink createSink(Map<String, String> config) throws IOException {
+        return new CustomSink(config);
+    }
+}
+```
+
+```java
+SinkFactory.registerProvider(new MySinkProvider());
+```
 
 ## Class Descriptions
 
 ### Core Components
-- **Logger**
-    - Entry point for clients
+- **Logger (Singleton)**
+    - Implemented as a Singleton to ensure a single entry point for clients
+    - getInstance() returns the singleton Logger instance
     - `init(...)` bootstraps the logging system
     - `getLogger(namespace)` returns a namespace‑specific logger
     - `close()` shuts down threads and closes all sinks
+    - Manages namespace-specific loggers through an internal registry
 
 - **LoggerContext**
     - Holds global settings (levels, format, thread/executor)
@@ -125,6 +143,11 @@ Register in `SinkFactory`, then set `sink_type:MY_SINK` in config.
     - Interface with two methods:
         - `append(LogMessage)`
         - `close()`
+
+- **LogSinkProvider**
+  - Interface with two methods:
+    - `getSinkType()`
+    - `createSink(Map<String, String> config)`
 
 #### Built‑in Sink Implementations
 - **FileSink**
